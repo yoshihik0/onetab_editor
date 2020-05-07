@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>OneTab Data Editor</title>
+    <style>
+        body {
+            background: lightskyblue;
+            text-align: center;
+        }
+        
+        textarea {
+            padding: 10px;
+            margin: 10px;
+            width: 800px;
+            max-width: 90%;
+            height: 200px;
+        }
+        
+        h1 {
+            text-align: center;
+        }
+        
+        h2 {
+            margin-top: 50px;
+        }
+        
+        .btn {
+            font-size: 20px;
+            padding: 10px;
+            background-color: indigo;
+            color: white;
+            width: 300px;
+        }
+        
+        #find_txt {
+            font-size: 20px;
+            padding: 10px;
+            width: 500px;
+            max-width: 90%;
+            margin: 30px 0;
+        }
+        
+        #output {
+            width: 800px;
+            max-width: 90%;
+            text-align: left;
+            margin: 50px auto;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>OneTab Data Editor</h1>
+    <hr />
+
+    <form action="" name="form">
+        <h2>OneTabのデータをペースト</h2>
+        <textarea name="original_txt" id="original_txt"></textarea><br />
+        <input type="button" value="処理" onclick="edit()" class="btn" />
+
+        <h2>OneTab Data</h2>
+        <textarea id="output_onetab"></textarea>
+
+        <h2>HTML</h2>
+        <textarea id="output_html"></textarea>
+        <br /> Original <span id="input_count">0</span> records, Output
+        <span id="output_count">0</span> records
+
+        <hr />
+
+        <h2>URLで絞り込む</h2>
+
+        <input type="text" id="find_txt" /><br />
+        <input type="checkbox" id="find_target_check" /> タイトルで検索<br />
+        <input type="button" value="絞り込み" onclick="find()" class="btn" /><br />
+
+        <h2>OneTab Data</h2>
+        <textarea id="find_onetab"></textarea><br />
+
+        <h2>HTML</h2>
+        <textarea id="find_html"></textarea><br />
+        <span id="find_count">0</span> records
+
+        <ul id="output"></ul>
+
+        <h2>絞り込んだ残り</h2>
+        <h2>OneTab Data</h2>
+        <textarea id="deleted_onetab"></textarea><br />
+
+        <h2>HTML</h2>
+        <textarea id="deleted_html"></textarea><br />
+        <span id="deleted_count">0</span> records
+    </form>
+    <script>
+        const data_ary = [];
+        const br_code = "\n";
+
+        function edit() {
+            data_ary.length = 0;
+
+            //データを行ごとに切り分け
+            const lines_ary = document.form.original_txt.value
+                .trim()
+                .split(br_code);
+            document.getElementById("input_count").innerHTML = lines_ary.length;
+
+            //データを行ごとに処理
+            lines_ary.forEach(function(value) {
+                const url_ary = value.split(" | ");
+
+                //facebookのidを削除
+                const temp = url_ary[0].split("?fbclid");
+                url_ary[0] = temp[0];
+
+                const temp2 = url_ary[0].split("&feature");
+                url_ary[0] = temp2[0];
+
+                // ダブリを削除
+                const result = data_ary.some((u) => u[0] === url_ary[0]);
+                if (result == 0) {
+                    data_ary.push(url_ary);
+                }
+            });
+
+            //出力処理
+            const output_ary_html = [];
+            const output_ary_onetab = [];
+
+            data_ary.forEach(function(value) {
+                output_ary_html.push(
+                    "<li><a href=" +
+                    value[0] +
+                    " target=’_blank’>" +
+                    value[1] +
+                    "</a></li>"
+                );
+                output_ary_onetab.push(value[0] + " | " + value[1]);
+            });
+
+            document.getElementById("output").innerHTML = output_ary_html.join("");
+            document.getElementById("output_html").value =
+                "<html><body><ul>" + output_ary_html.join("") + "</ul></body></html>";
+            document.getElementById("output_onetab").value = output_ary_onetab.join(
+                br_code
+            );
+            document.getElementById("output_count").innerHTML = data_ary.length;
+        }
+
+        // 絞り込み検索
+        function find() {
+            const find_target = true;
+            const find_ary_onetab = [];
+            const find_ary_html = [];
+            const find_txt = document.form.find_txt.value;
+            const deleted_ary_onetab = [];
+            const deleted_ary_html = [];
+
+            // find_target_check.checked
+            data_ary.forEach(function(value) {
+                if (
+                    value[Number(find_target_check.checked)].match(
+                        document.form.find_txt.value
+                    )
+                ) {
+                    find_ary_onetab.push(value[0] + " | " + value[1]);
+                    find_ary_html.push(
+                        "<li><a href=" +
+                        value[0] +
+                        " target=’_blank’>" +
+                        value[1] +
+                        "</a></li>"
+                    );
+                } else {
+                    //絞り込んだ残り
+                    deleted_ary_onetab.push(value[0] + " | " + value[1]);
+                    deleted_ary_html.push(
+                        "<li><a href=" +
+                        value[0] +
+                        " target=’_blank’>" +
+                        value[1] +
+                        "</a></li>"
+                    );
+                }
+            });
+
+            document.getElementById("find_onetab").value = find_ary_onetab.join(
+                br_code
+            );
+            document.getElementById("find_html").value =
+                "<html><body><ul>" + find_ary_html.join("") + "</ul></body></html>";
+            document.getElementById("output").innerHTML = find_ary_html.join("");
+            document.getElementById("find_count").innerHTML =
+                find_ary_onetab.length;
+            document.getElementById(
+                "deleted_onetab"
+            ).value = deleted_ary_onetab.join(br_code);
+            document.getElementById("deleted_html").value =
+                "<html><body><ul>" +
+                deleted_ary_html.join("") +
+                "</ul></body></html>";
+            document.getElementById("deleted_count").innerHTML =
+                deleted_ary_onetab.length;
+        }
+    </script>
+</body>
+
+</html>
